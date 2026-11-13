@@ -1908,7 +1908,10 @@ mod tests {
                     excludes: [],
                     opacity: None,
                     block_out_from: Some(
-                        Screencast,
+                        BlockOutFrom {
+                            target: Screencast,
+                            kind: Fill,
+                        },
                     ),
                     shadow: ShadowRule {
                         off: false,

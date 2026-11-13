@@ -1069,8 +1069,9 @@ impl<W: LayoutElement> FloatingSpace<W> {
         //
         // FIXME: I guess this should rather preserve the stacking order when the window is closed.
         for closing in self.closing_windows.iter().rev() {
-            let elem = closing.render(ctx.as_gles(), view_rect, scale);
-            push(elem.into());
+            if let Some(elem) = closing.render(ctx.as_gles(), view_rect, scale) {
+                push(elem.into());
+            }
         }
 
         let active = self.active_window_id.clone();
