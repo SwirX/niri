@@ -272,6 +272,13 @@ async fn process(ctx: &ClientCtx, request: Request) -> Reply {
     let response = match request {
         Request::ReturnError => return Err(String::from("example compositor error")),
         Request::Version => Response::Version(version()),
+        Request::Capabilities => Response::Capabilities(niri_ipc::Capabilities {
+            capture_screen: 1,
+            layer_exclusion: 1,
+            block_out_hide: true,
+            screen_shaders: 0,
+            flavor: String::from("apeiron"),
+        }),
         Request::Outputs => {
             let ipc_outputs = ctx.ipc_outputs.lock().unwrap().clone();
             let outputs = ipc_outputs.values().cloned().map(|o| (o.name.clone(), o));

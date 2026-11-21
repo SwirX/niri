@@ -38,6 +38,7 @@ pub fn handle_msg(mut msg: Msg, json: bool) -> anyhow::Result<()> {
 
     let request = match &msg {
         Msg::Version => Request::Version,
+        Msg::Capabilities => Request::Capabilities,
         Msg::Outputs => Request::Outputs,
         Msg::FocusedWindow => Request::FocusedWindow,
         Msg::FocusedOutput => Request::FocusedOutput,
@@ -147,6 +148,24 @@ pub fn handle_msg(mut msg: Msg, json: bool) -> anyhow::Result<()> {
 
             println!("Compositor version: {compositor_version}");
             println!("CLI version:        {cli_version}");
+        }
+        Msg::Capabilities => {
+            let Response::Capabilities(caps) = response else {
+                bail!("unexpected response: expected Capabilities, got {response:?}");
+            };
+
+            if json {
+                let output =
+                    serde_json::to_string(&caps).context("error formatting response")?;
+                println!("{output}");
+                return Ok(());
+            }
+
+            println!("Compositor Flavor:   {}", caps.flavor);
+            println!("Capture Screen:      v{}", caps.capture_screen);
+            println!("Layer Exclusion:     v{}", caps.layer_exclusion);
+            println!("Block-Out Hide:      {}", caps.block_out_hide);
+            println!("Screen Shaders:      v{}", caps.screen_shaders);
         }
         Msg::Outputs => {
             let Response::Outputs(outputs) = response else {
