@@ -119,6 +119,8 @@ pub enum Request {
     OverviewState,
     /// Request information about screencasts.
     Casts,
+    /// Request compositor capabilities (features, extensions, and versions).
+    Capabilities,
 }
 
 /// Reply from niri to client.
@@ -165,6 +167,24 @@ pub enum Response {
     OverviewState(Overview),
     /// Information about screencasts.
     Casts(Vec<Cast>),
+    /// Capabilities of the running compositor instance.
+    Capabilities(Capabilities),
+}
+
+/// Versioned compositor capabilities and extensions.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "json-schema", derive(schemars::JsonSchema))]
+pub struct Capabilities {
+    /// Screen capture extension version (0 if unsupported, 1+ for supported).
+    pub capture_screen: u32,
+    /// Per-capture layer namespace exclusion version (0 if unsupported, 1+ for supported).
+    pub layer_exclusion: u32,
+    /// Window/layer rule block-out-from kind="hide" support.
+    pub block_out_hide: bool,
+    /// Per-output screen shader capability version (0 if unsupported).
+    pub screen_shaders: u32,
+    /// Compositor flavor identifier (e.g. "apeiron", "stock").
+    pub flavor: String,
 }
 
 /// Overview information.
@@ -2398,5 +2418,24 @@ mod tests {
             }
             _ => panic!("wrong variant"),
         }
+    }
+
+    #[test]
+    fn test_capabilities_serialization() {
+        let caps = Capabilities {
+            capture_screen: 1,
+            layer_exclusion: 1,
+            block_out_hide: true,
+            screen_shaders: 0,
+            flavor: "apeiron".into(),
+        };
+        let json = serde_json::to_string(&caps).unwrap();
+        let deserialized: Capabilities = serde_json::from_str(&json).unwrap();
+        assert_eq!(caps, deserialized);
+
+        let req = Request::Capabilities;
+        let req_json = serde_json::to_string(&req).unwrap();
+        let deserialized_req: Request = serde_json::from_str(&req_json).unwrap();
+        assert!(matches!(deserialized_req, Request::Capabilities));
     }
 }

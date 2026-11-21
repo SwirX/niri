@@ -106,6 +106,8 @@ pub enum Msg {
     EventStream,
     /// Print the version of the running niri instance.
     Version,
+    /// Print the capabilities and extensions supported by the running niri instance.
+    Capabilities,
     /// Request an error from the running niri instance.
     RequestError,
     /// Print the overview state.
