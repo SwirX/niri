@@ -722,6 +722,32 @@ impl State {
                     });
                 }
             }
+            Action::CaptureScreen {
+                output,
+                exclude_layer_namespaces,
+                path,
+            } => {
+                let target_output = if let Some(name) = output {
+                    self.niri.layout.outputs().find(|o| o.name() == name).cloned()
+                } else {
+                    self.niri.layout.active_output().cloned()
+                };
+
+                if let Some(target_output) = target_output {
+                    self.backend.with_primary_renderer(|renderer| {
+                        if let Err(err) = self.niri.capture_screen(
+                            renderer,
+                            &target_output,
+                            &exclude_layer_namespaces,
+                            &path,
+                        ) {
+                            warn!("error capturing screen: {err:?}");
+                        }
+                    });
+                } else {
+                    warn!("capture-screen: target output not found");
+                }
+            }
             Action::ConfirmScreenshot { write_to_disk } => {
                 self.confirm_screenshot(write_to_disk);
             }

@@ -475,6 +475,16 @@ fn validate_action(action: &Action) -> Result<(), String> {
         }
     }
 
+    if let Action::CaptureScreen { path, .. } = action {
+        let p = Path::new(path);
+        if !p.is_absolute() {
+            return Err(format!("path must be absolute: {path}"));
+        }
+        if p.is_dir() {
+            return Err(format!("path must point to a file, not a directory: {path}"));
+        }
+    }
+
     if let Action::LoadConfigFile { path: Some(path) } = action {
         let p = Path::new(path);
         if !p.is_file() {

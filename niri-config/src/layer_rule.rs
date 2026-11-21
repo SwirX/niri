@@ -36,3 +36,23 @@ pub struct Match {
     #[knuffel(property, str)]
     pub layer: Option<niri_ipc::Layer>,
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::appearance::{BlockOutKind, BlockOutTarget};
+
+    #[test]
+    fn parse_layer_rule_block_out_from_hide() {
+        let kdl = r#"
+            layer-rule {
+                match namespace="^apeiron-desktop-clock$"
+                block-out-from "screen-capture" kind="hide"
+            }
+        "#;
+        let config = crate::Config::parse(std::path::Path::new("test.kdl"), kdl).config.unwrap();
+        let rule = config.layer_rules.first().expect("layer_rule should be parsed");
+        let b = rule.block_out_from.expect("block_out_from should be parsed");
+        assert_eq!(b.target, BlockOutTarget::ScreenCapture);
+        assert_eq!(b.kind, BlockOutKind::Hide);
+    }
+}

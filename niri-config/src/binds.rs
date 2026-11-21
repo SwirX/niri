@@ -144,6 +144,12 @@ pub enum Action {
         show_pointer: bool,
         path: Option<String>,
     },
+    #[knuffel(skip)]
+    CaptureScreen {
+        output: Option<String>,
+        exclude_layer_namespaces: Vec<String>,
+        path: String,
+    },
     ToggleKeyboardShortcutsInhibit,
     CloseWindow,
     #[knuffel(skip)]
@@ -424,6 +430,15 @@ impl From<niri_ipc::Action> for Action {
                 id,
                 write_to_disk,
                 show_pointer,
+                path,
+            },
+            niri_ipc::Action::CaptureScreen {
+                output,
+                exclude_layer_namespaces,
+                path,
+            } => Self::CaptureScreen {
+                output,
+                exclude_layer_namespaces,
                 path,
             },
             niri_ipc::Action::ToggleKeyboardShortcutsInhibit {} => {

@@ -196,6 +196,14 @@ impl MappedLayer {
             return;
         }
 
+        if ctx
+            .exclude_layer_namespaces
+            .iter()
+            .any(|ns| ns == self.surface.namespace())
+        {
+            return;
+        }
+
         let scale = Scale::from(self.scale);
         let alpha = self.rules.opacity.unwrap_or(1.).clamp(0., 1.);
 
@@ -268,6 +276,14 @@ impl MappedLayer {
         push: &mut dyn FnMut(LayerSurfaceRenderElement<R>),
     ) {
         if ctx.target.should_block_out(self.rules.block_out_from) {
+            return;
+        }
+
+        if ctx
+            .exclude_layer_namespaces
+            .iter()
+            .any(|ns| ns == self.surface.namespace())
+        {
             return;
         }
 

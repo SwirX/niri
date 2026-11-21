@@ -548,6 +548,7 @@ impl Mapped {
                 renderer,
                 target: RenderTarget::Screencast,
                 xray: None,
+                exclude_layer_namespaces: &[],
             },
             location,
             scale,

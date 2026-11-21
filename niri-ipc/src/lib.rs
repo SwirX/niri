@@ -254,6 +254,20 @@ pub enum Action {
         #[cfg_attr(feature = "clap", arg(long, action = clap::ArgAction::Set))]
         path: Option<String>,
     },
+    /// Capture a screen to a file, with optional layer namespace exclusion, without touching the clipboard.
+    CaptureScreen {
+        /// Target output name (e.g. "eDP-1"). If None, captures the focused output.
+        #[cfg_attr(feature = "clap", arg(short, long))]
+        output: Option<String>,
+
+        /// Layer-shell namespaces to exclude from this capture.
+        #[cfg_attr(feature = "clap", arg(long, value_delimiter = ','))]
+        exclude_layer_namespaces: Vec<String>,
+
+        /// Path to save the captured PNG to.
+        #[cfg_attr(feature = "clap", arg(short, long))]
+        path: String,
+    },
     /// Screenshot a window.
     #[cfg_attr(feature = "clap", clap(about = "Screenshot the focused window"))]
     ScreenshotWindow {
@@ -2105,5 +2119,28 @@ mod tests {
         );
         assert!("-".parse::<PositionChange>().is_err());
         assert!("10% ".parse::<PositionChange>().is_err());
+    }
+
+    #[test]
+    fn test_capture_screen_serialization() {
+        let action = Action::CaptureScreen {
+            output: Some("eDP-1".into()),
+            exclude_layer_namespaces: vec!["apeiron-desktop-clock".into()],
+            path: "/tmp/test.png".into(),
+        };
+        let json = serde_json::to_string(&action).unwrap();
+        let deserialized: Action = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            Action::CaptureScreen {
+                output,
+                exclude_layer_namespaces,
+                path,
+            } => {
+                assert_eq!(output.as_deref(), Some("eDP-1"));
+                assert_eq!(exclude_layer_namespaces, vec!["apeiron-desktop-clock"]);
+                assert_eq!(path, "/tmp/test.png");
+            }
+            _ => panic!("wrong variant"),
+        }
     }
 }

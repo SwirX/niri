@@ -1,0 +1,80 @@
+name: Upstream Sync & Verification
+
+on:
+  schedule:
+    # Run once daily at 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-upstream:
+    name: Check Upstream Releases & Commits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git Identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add Upstream Remote
+        run: |
+          git remote add upstream https://github.com/niri-wm/niri.git
+          git fetch upstream --tags --prune
+
+      - name: Check for New Commits & Fast-Forward Mirror
+        run: |
+          git checkout main
+          BEHIND_COUNT=$(git rev-list --count HEAD..upstream/main)
+          echo "Upstream main has $BEHIND_COUNT new commit(s)."
+          if [ "$BEHIND_COUNT" -gt 0 ]; then
+            echo "Fast-forwarding main branch to mirror upstream..."
+            git merge --ff-only upstream/main
+            git push origin main
+          fi
+
+      - name: Test Candidate Rebase of Apeiron Patches
+        run: |
+          # Create an ephemeral verification branch
+          git checkout -B ci/verify-apeiron-stable upstream/main
+          
+          # Attempt applying Apeiron custom patches
+          echo "Testing patch application on upstream/main..."
+          if git cherry-pick poc-26.04-backport~1..poc-26.04-backport; then
+            echo "Patches applied cleanly!"
+          else
+            echo "Merge conflict detected when rebasing onto upstream/main."
+            echo "Manual review required before promoting apeiron/capture-api."
+            exit 1
+          fi
+
+      - name: Setup Rust Toolchain
+        if: success()
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-sync-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-sync-
+
+      - name: Run Regression Tests
+        if: success()
+        run: |
+          cargo test --locked -p niri-config -p niri-ipc
