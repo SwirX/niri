@@ -2372,6 +2372,7 @@ impl State {
                     target: RenderTarget::Output,
                     renderer,
                     xray: None,
+                    exclude_layer_namespaces: &[],
                 };
 
                 self.niri.fill_xray_elements(ctx.r(), output);
@@ -5815,6 +5816,7 @@ impl Niri {
                         renderer,
                         target: RenderTarget::ScreenCapture,
                         xray: None,
+                        exclude_layer_namespaces: &[],
                     };
                     let offset = screencopy.region_loc().upscale(-1);
                     let mut elements = Vec::new();
@@ -5890,6 +5892,7 @@ impl Niri {
             renderer,
             target: RenderTarget::ScreenCapture,
             xray: None,
+            exclude_layer_namespaces: &[],
         };
         let offset = screencopy.region_loc().upscale(-1);
         let mut elements = Vec::new();
@@ -6006,6 +6009,7 @@ impl Niri {
                     renderer: &mut *renderer,
                     target: RenderTarget::ScreenCapture,
                     xray: None,
+                    exclude_layer_namespaces: &[],
                 };
                 let mut elements = Vec::new();
                 self.render(ctx, output, draw_cursor, &mut |elem| {
@@ -6106,6 +6110,7 @@ impl Niri {
                 // Consistent with outputs and wlr-screencopy.
                 target: RenderTarget::ScreenCapture,
                 xray: None,
+                exclude_layer_namespaces: &[],
             };
             mapped.render_for_screen_cast(ctx, scale, &mut |elem| {
                 elements.push(WindowCaptureRenderElement::Window(elem));
@@ -6482,6 +6487,7 @@ impl Niri {
                     renderer,
                     target,
                     xray: None,
+                    exclude_layer_namespaces: &[],
                 };
                 let elements = self.render_to_vec(ctx, &output, false);
                 let elements = elements.iter().rev();
@@ -6564,6 +6570,7 @@ impl Niri {
             renderer,
             target: RenderTarget::ScreenCapture,
             xray: None,
+            exclude_layer_namespaces: &[],
         };
         let elements = self.render_to_vec(ctx, output, include_pointer);
         let elements = elements.iter().rev();
@@ -6578,6 +6585,72 @@ impl Niri {
 
         self.save_screenshot(size, pixels, write_to_disk, path)
             .context("error saving screenshot")
+    }
+
+    pub fn capture_screen(
+        &mut self,
+        renderer: &mut GlesRenderer,
+        output: &Output,
+        exclude_layer_namespaces: &[String],
+        path: &str,
+    ) -> anyhow::Result<()> {
+        let _span = tracy_client::span!("Niri::capture_screen");
+
+        // Refuse capture while session is locked to prevent any desktop content exposure.
+        if self.is_locked() {
+            anyhow::bail!("cannot capture screen while session is locked");
+        }
+
+        self.update_render_elements(Some(output));
+
+        let size = output.current_mode().unwrap().size;
+        let transform = output.current_transform();
+        let size = transform.transform_size(size);
+
+        let scale = Scale::from(output.current_scale().fractional_scale());
+        let ctx = RenderCtx {
+            renderer,
+            target: RenderTarget::ScreenCapture,
+            xray: None,
+            exclude_layer_namespaces,
+        };
+        let elements = self.render_to_vec(ctx, output, false);
+        let elements = elements.iter().rev();
+        let pixels = render_to_vec(
+            renderer,
+            size,
+            scale,
+            Transform::Normal,
+            Fourcc::Abgr8888,
+            elements,
+        )?;
+
+        let path = PathBuf::from(path);
+        if let Some(parent) = path.parent() {
+            if !parent.as_os_str().is_empty() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+        }
+
+        #[cfg(unix)]
+        use std::os::unix::fs::OpenOptionsExt;
+
+        let mut opts = std::fs::OpenOptions::new();
+        opts.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        {
+            opts.custom_flags(libc::O_NOFOLLOW);
+            opts.mode(0o600);
+        }
+
+        let file = opts
+            .open(&path)
+            .with_context(|| format!("failed to securely create output file: {path:?}"))?;
+        let writer = std::io::BufWriter::new(file);
+        write_png_rgba8(writer, size.w as u32, size.h as u32, &pixels)
+            .with_context(|| format!("failed to encode PNG to: {path:?}"))?;
+
+        Ok(())
     }
 
     pub fn screenshot_window(
@@ -6625,6 +6698,7 @@ impl Niri {
             renderer,
             target,
             xray: None,
+            exclude_layer_namespaces: &[],
         };
         mapped.render(
             ctx,
@@ -6803,6 +6877,7 @@ impl Niri {
                 renderer,
                 target: RenderTarget::ScreenCapture,
                 xray: None,
+                exclude_layer_namespaces: &[],
             };
             let elements = self.render_to_vec(ctx, output, include_pointer);
 
@@ -7352,6 +7427,7 @@ impl Niri {
                         renderer,
                         target,
                         xray: None,
+                        exclude_layer_namespaces: &[],
                     };
                     let elements = self.render_to_vec(ctx, &output, false);
                     let elements = elements.iter().rev();

@@ -1955,6 +1955,7 @@ impl Tty {
             renderer: &mut renderer,
             target: RenderTarget::Output,
             xray: None,
+            exclude_layer_namespaces: &[],
         };
         let mut elements = niri.render_to_vec(ctx, output, true);
 

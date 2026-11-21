@@ -58,6 +58,7 @@ pub struct RenderCtx<'a, R> {
     pub renderer: &'a mut R,
     pub target: RenderTarget,
     pub xray: Option<&'a Xray>,
+    pub exclude_layer_namespaces: &'a [String],
 }
 
 impl<'a, R> RenderCtx<'a, R> {
@@ -68,6 +69,7 @@ impl<'a, R> RenderCtx<'a, R> {
             renderer: self.renderer,
             target: self.target,
             xray: self.xray,
+            exclude_layer_namespaces: self.exclude_layer_namespaces,
         }
     }
 }
@@ -78,6 +80,7 @@ impl<'a, R: AsGlesRenderer> RenderCtx<'a, R> {
             renderer: self.renderer.as_gles_renderer(),
             target: self.target,
             xray: self.xray,
+            exclude_layer_namespaces: self.exclude_layer_namespaces,
         }
     }
 }
