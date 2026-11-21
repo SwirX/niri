@@ -34,12 +34,15 @@ pub mod binds;
 pub mod debug;
 pub mod error;
 pub mod gestures;
+pub mod global_shader;
 pub mod input;
 pub mod layer_rule;
 pub mod layout;
 pub mod misc;
 pub mod output;
+pub mod output_shader;
 pub mod recent_windows;
+pub mod shader_presets;
 pub mod utils;
 pub mod window_rule;
 pub mod workspace;
@@ -50,11 +53,16 @@ pub use crate::binds::*;
 pub use crate::debug::Debug;
 pub use crate::error::{ConfigIncludeError, ConfigParseResult};
 pub use crate::gestures::Gestures;
+pub use crate::global_shader::GlobalShaderCaps;
 pub use crate::input::{Input, ModKey, ScrollMethod, TrackLayout, WarpMouseToFocusMode, Xkb};
 pub use crate::layer_rule::LayerRule;
 pub use crate::layout::*;
 pub use crate::misc::*;
 pub use crate::output::{Output, OutputName, Outputs, Position, Vrr};
+pub use crate::output_shader::{
+    OutputShaderPart, OutputShaderPassPart, OutputShaderPreset, OutputShadersPart,
+};
+pub use crate::shader_presets::{builtin_preset_source, ShaderPresetRefPart, BUILTIN_PRESET_NAMES};
 use crate::recent_windows::RecentWindowsPart;
 pub use crate::recent_windows::{MruDirection, MruFilter, MruPreviews, MruScope, RecentWindows};
 pub use crate::utils::FloatOrInt;
@@ -92,6 +100,7 @@ pub struct Config {
     pub debug: Debug,
     pub workspaces: Vec<Workspace>,
     pub recent_windows: RecentWindows,
+    pub output_shaders: Vec<OutputShaderPreset>,
 }
 
 #[derive(Debug, Clone)]
@@ -165,6 +174,7 @@ where
                     | "window-rule"
                     | "layer-rule"
                     | "workspace"
+                    | "output-shaders"
                     | "include"
             ) && !seen.insert(name)
             {
@@ -292,6 +302,11 @@ where
                     }
 
                     config.recent_windows.merge_with(&part);
+                }
+
+                "output-shaders" => {
+                    let part = OutputShadersPart::decode_node(node, ctx)?;
+                    config.borrow_mut().output_shaders.extend(part.presets);
                 }
 
                 "include" => {

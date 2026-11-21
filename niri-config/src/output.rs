@@ -8,6 +8,7 @@ use knuffel::Decode;
 use niri_ipc::{ConfiguredMode, HSyncPolarity, Transform, VSyncPolarity};
 
 use crate::gestures::HotCorners;
+use crate::output_shader::OutputShaderPart;
 use crate::{Color, FloatOrInt, LayoutPart};
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -76,6 +77,8 @@ pub struct Output {
     pub hot_corners: Option<HotCorners>,
     #[knuffel(child)]
     pub layout: Option<LayoutPart>,
+    #[knuffel(child)]
+    pub shader: Option<OutputShaderPart>,
 }
 
 impl Output {
@@ -108,6 +111,7 @@ impl Default for Output {
             backdrop_color: None,
             hot_corners: None,
             layout: None,
+            shader: None,
         }
     }
 }
