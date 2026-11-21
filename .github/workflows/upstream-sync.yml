@@ -42,18 +42,16 @@ jobs:
             git push origin main
           fi
 
-      - name: Test Candidate Rebase of Apeiron Patches
+      - name: Test Candidate Integration on Ephemeral Branch
         run: |
-          # Create an ephemeral verification branch
-          git checkout -B ci/verify-apeiron-stable upstream/main
-          
-          # Attempt applying Apeiron custom patches
-          echo "Testing patch application on upstream/main..."
-          if git cherry-pick poc-26.04-backport~1..poc-26.04-backport; then
-            echo "Patches applied cleanly!"
+          # Test candidate rebasing of apeiron/capture-api onto updated upstream/main
+          git checkout -B ci/candidate-sync origin/apeiron/capture-api
+          echo "Rebasing candidate branch onto upstream/main..."
+          if git rebase upstream/main; then
+            echo "Candidate rebase cleanly succeeded."
           else
-            echo "Merge conflict detected when rebasing onto upstream/main."
-            echo "Manual review required before promoting apeiron/capture-api."
+            echo "Merge conflict detected during candidate rebase."
+            git rebase --abort
             exit 1
           fi
 
@@ -74,7 +72,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-sync-
 
-      - name: Run Regression Tests
+      - name: Run Build and Regression Tests
         if: success()
         run: |
+          cargo check --bin niri
           cargo test --locked -p niri-config -p niri-ipc
